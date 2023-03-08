@@ -355,9 +355,11 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 				log.Printf("[ERROR] cmd.Wait panicked: %v", err)
 			}
 		}()
+		log.Printf("[DEBUG] waiting for command to finish")
 		if err := cmd.Wait(); err != nil {
 			commandError = err
 		}
+		log.Printf("[DEBUG] command finished")
 	}()
 
 	go func() {
@@ -366,8 +368,10 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 				log.Printf("[ERROR] timeout wait goroutine panicked: %v", err)
 			}
 		}()
+		log.Printf("[DEBUG] waiting for timeout")
 		<-timer.C
 		commandError = fmt.Errorf("timed out during a tunnel setup")
+		log.Printf("[DEBUG] got timeout")
 	}()
 
 	for !tunnelServer.Ready {
