@@ -352,19 +352,6 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[ERROR] cmd.Wait panicked: %v", err)
-			}
-		}()
-		log.Printf("[DEBUG] waiting for command to finish")
-		if err := cmd.Wait(); err != nil {
-			commandError = err
-		}
-		log.Printf("[DEBUG] command finished")
-	}()
-
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
 				log.Printf("[ERROR] timeout wait goroutine panicked: %v", err)
 			}
 		}()
@@ -388,6 +375,12 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 	log.Printf("[DEBUG] local port: %v", sshTunnel.Local.Port)
 	d.Set("local", flattenEndpoint(sshTunnel.Local))
 	d.SetId(sshTunnel.Local.Address())
+
+	log.Printf("[DEBUG] waiting for command to finish")
+	if err := cmd.Wait(); err != nil {
+		return diag.FromErr(err)
+	}
+	log.Printf("[DEBUG] command finished")
 
 	return diags
 }
