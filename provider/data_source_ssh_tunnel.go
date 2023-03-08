@@ -325,36 +325,47 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 
-	redirectStd := func(std io.ReadCloser) {
+	redirectStd := func(std io.ReadCloser, name string) {
+		log.Printf("[DEBUG] starting redirectStd(%s)", name)
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[ERROR] redirectStd(%v) panicked: %v", std, err)
+				log.Printf("[ERROR] redirectStd(%s) panicked: %v", name, err)
 			}
 		}()
 		in := bufio.NewScanner(std)
 		for in.Scan() {
-			log.Println(in.Text())
+			log.Printf("child process %s: %s", name, in.Text())
 		}
 		if err := in.Err(); err != nil {
-			log.Printf("[ERROR] redirectStd: %s", err)
+			log.Printf("[ERROR] redirectStd(%s): %s", name, err)
 		}
-		log.Printf("[DEBUG] redirectStd(%v) finished", std)
+		log.Printf("[DEBUG] redirectStd(%s) finished", name)
 	}
 
-	go redirectStd(stdout)
-	go redirectStd(stderr)
+	go redirectStd(stdout, "stdout")
+	go redirectStd(stderr, "stderr")
 
 	var commandError error
 	timer := time.NewTimer(30 * time.Second)
 	defer timer.Stop()
 
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("[ERROR] cmd.Wait panicked: %v", err)
+			}
+		}()
 		if err := cmd.Wait(); err != nil {
 			commandError = err
 		}
 	}()
 
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("[ERROR] timeout wait goroutine panicked: %v", err)
+			}
+		}()
 		<-timer.C
 		commandError = fmt.Errorf("timed out during a tunnel setup")
 	}()
@@ -367,6 +378,7 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 		time.Sleep(1 * time.Second)
 	}
 
+	log.Printf("[DEBUG] closing RPC Server %s://%s", proto, tunnelServerInbound.Addr().String())
 	tunnelServerInbound.Close()
 
 	log.Printf("[DEBUG] local port: %v", sshTunnel.Local.Port)
