@@ -326,12 +326,17 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	redirectStd := func(std io.ReadCloser) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("[ERROR] redirectStd(%v) panicked: %v", std, err)
+			}
+		}()
 		in := bufio.NewScanner(std)
 		for in.Scan() {
 			log.Println(in.Text())
 		}
 		if err := in.Err(); err != nil {
-			log.Printf("[ERROR] %s", err)
+			log.Printf("[ERROR] redirectStd: %s", err)
 		}
 	}
 
