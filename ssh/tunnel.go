@@ -227,16 +227,21 @@ func (st *SSHTunnel) Run(proto, serverAddress string, ppid int) error {
 			log.Printf("error accepting connection: %s", err)
 			continue
 		}
+		log.Printf("[DEBUG] accepted connection from %s", localConn.RemoteAddr().String())
 
 		remoteConn, err := sshClientConn.Dial(proto, st.Remote.String())
 		if err != nil {
 			log.Printf("error opening connection to %s: %s", st.Remote.Address(), err)
 			continue
 		}
+		log.Printf("[DEBUG] opened connection to %s for %s", remoteConn.RemoteAddr().String(), localConn.RemoteAddr().String())
 
 		go copyConn(localConn, remoteConn)
 		go copyConn(remoteConn, localConn)
+		log.Printf("[DEBUG] connection forwarding set up")
 	}
+
+	log.Printf("[DEBUG] SSH Tunnel Run() finished")
 
 	return nil
 }

@@ -338,6 +338,7 @@ func dataSourceSSHTunnelRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := in.Err(); err != nil {
 			log.Printf("[ERROR] redirectStd: %s", err)
 		}
+		log.Printf("[DEBUG] redirectStd(%v) finished", std)
 	}
 
 	go redirectStd(stdout)
